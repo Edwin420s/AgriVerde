@@ -1,222 +1,177 @@
-import pandas as pd
-import numpy as np
-from pmdarima import auto_arima
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
-import io
-import csv
-from fastapi.responses import StreamingResponse
+from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey, JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from app.database.database import Base
 
-# === 1. AUTO-SARIMA FORECAST ===
+class User(Base):
+    __tablename__ = "users"
 
-def auto_sarima_forecast(
-    device_id: int,
-    hours_ahead: int = 24,
-    db: Session = None
-) -> Dict[str, Any]:
-    """
-    Auto-select SARIMA order using pmdarima and forecast.
-    """
-    df = get_full_measurements_df(device_id, hours=72, db=db)  # use last 3 days
-    if len(df) < 48:
-        return {"error": "Insufficient data for auto-SARIMA (need >48 points)"}
-    
-    # Resample to hourly and fill missing
-    df_resampled = df.set_index('ds').resample('H').mean().interpolate().dropna()
-    if len(df_resampled) < 24:
-        return {"error": "Not enough hourly points after resampling"}
-    
-    series = df_resampled['y']
-    
-    # Auto-ARIMA with seasonality (period=24)
-    try:
-        model = auto_arima(
-            series,
-            start_p=0, max_p=3,
-            start_q=0, max_q=3,
-            seasonal=True, m=24,
-            start_P=0, max_P=2,
-            start_Q=0, max_Q=2,
-            trace=False,
-            error_action='ignore',
-            suppress_warnings=True,
-            stepwise=True,
-            random_state=42
-        )
-        forecast = model.predict(n_periods=hours_ahead)
-        forecast_index = pd.date_range(
-            start=series.index[-1] + pd.Timedelta(hours=1),
-            periods=hours_ahead,
-            freq='H'
-        )
-        forecast_list = [
-            {"timestamp": ts.isoformat(), "predicted_moisture": round(val, 2)}
-            for ts, val in zip(forecast_index, forecast)
-        ]
-        return {
-            "forecast": forecast_list,
-            "model": f"SARIMA{model.order}{model.seasonal_order}",
-            "aic": round(model.aic(), 2)
-        }
-    except Exception as e:
-        logger.error(f"Auto-SARIMA failed: {e}")
-        return {"error": str(e)}
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
+    full_name = Column(String)
+    is_active = Column(Boolean, default=True)
+    is_superuser = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    farms = relationship("Farm", back_populates="owner")
 
-# === 2. LSTM FORECAST (with data length check) ===
+class Farm(Base):
+    __tablename__ = "farms"
 
-def lstm_forecast(
-    device_id: int,
-    hours_ahead: int = 24,
-    lookback: int = 48,
-    db: Session = None
-) -> Dict[str, Any]:
-    """
-    LSTM forecast – only if we have at least 6 months of data (4320 hourly points).
-    """
-    df = get_full_measurements_df(device_id, hours=4320, db=db)  # 180 days
-    if len(df) < 4320:
-        return {"error": f"Insufficient data for LSTM. Need 4320 hourly points, got {len(df)}"}
-    
-    # Resample to hourly
-    df_resampled = df.set_index('ds').resample('H').mean().interpolate().dropna()
-    if len(df_resampled) < 4320:
-        return {"error": f"After resampling, only {len(df_resampled)} points (need 4320)"}
-    
-    series = df_resampled['y'].values.reshape(-1, 1)
-    
-    # Scale data
-    scaler = MinMaxScaler(feature_range=(0, 1))
-    scaled = scaler.fit_transform(series)
-    
-    # Prepare sequences
-    X, y = [], []
-    for i in range(lookback, len(scaled)):
-        X.append(scaled[i-lookback:i, 0])
-        y.append(scaled[i, 0])
-    X = np.array(X).reshape(-1, lookback, 1)
-    y = np.array(y)
-    
-    # Train/test split (80/20)
-    split = int(0.8 * len(X))
-    X_train, X_test = X[:split], X[split:]
-    y_train, y_test = y[:split], y[split:]
-    
-    # Build LSTM model
-    model = Sequential([
-        LSTM(50, return_sequences=True, input_shape=(lookback, 1)),
-        Dropout(0.2),
-        LSTM(50, return_sequences=False),
-        Dropout(0.2),
-        Dense(1)
-    ])
-    model.compile(optimizer='adam', loss='mse')
-    
-    # Train with early stopping
-    early_stop = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-    model.fit(X_train, y_train, epochs=50, batch_size=32, 
-              validation_data=(X_test, y_test), callbacks=[early_stop], verbose=0)
-    
-    # Predict next hours_ahead steps recursively
-    last_sequence = scaled[-lookback:].reshape(1, lookback, 1)
-    predictions = []
-    for _ in range(hours_ahead):
-        pred = model.predict(last_sequence, verbose=0)[0, 0]
-        predictions.append(pred)
-        # Update sequence
-        last_sequence = np.append(last_sequence[0, 1:, 0], pred).reshape(1, lookback, 1)
-    
-    # Inverse transform
-    predicted = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
-    
-    last_time = df_resampled.index[-1]
-    forecast_index = pd.date_range(start=last_time + pd.Timedelta(hours=1), periods=hours_ahead, freq='H')
-    forecast_list = [
-        {"timestamp": ts.isoformat(), "predicted_moisture": round(val, 2)}
-        for ts, val in zip(forecast_index, predicted)
-    ]
-    
-    return {
-        "forecast": forecast_list,
-        "model": "LSTM",
-        "lookback": lookback,
-        "rmse": round(np.sqrt(model.evaluate(X_test, y_test, verbose=0)), 2)
-    }
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    location = Column(String)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    owner = relationship("User", back_populates="farms")
+    fields = relationship("Field", back_populates="farm")
 
-# === 3. REAL-TIME ALERT TRIGGER ===
+class Field(Base):
+    __tablename__ = "fields"
 
-def trigger_alert_on_forecast_drop(
-    device_id: int,
-    target_moisture: int = 30,
-    db: Session = None
-) -> Dict[str, Any]:
-    """
-    Check if forecast predicts moisture below target within next 24 hours.
-    If so, create an Alert record.
-    """
-    # Use Prophet forecast (or any other) – we'll use auto-sarima for speed
-    forecast_result = auto_sarima_forecast(device_id, hours_ahead=24, db=db)
-    if "error" in forecast_result:
-        return {"error": forecast_result["error"]}
-    
-    forecast_list = forecast_result["forecast"]
-    if not forecast_list:
-        return {"message": "No forecast available"}
-    
-    # Find first time moisture drops below target
-    for entry in forecast_list:
-        if entry["predicted_moisture"] < target_moisture:
-            # Create an alert
-            new_alert = Alert(
-                device_id=device_id,
-                severity="WARNING",
-                message=f"Forecast predicts moisture below {target_moisture}% at {entry['timestamp']}",
-                forecast_data=entry
-            )
-            db.add(new_alert)
-            db.commit()
-            return {
-                "alert_created": True,
-                "alert_id": new_alert.id,
-                "timestamp": entry["timestamp"],
-                "predicted_moisture": entry["predicted_moisture"]
-            }
-    
-    return {"alert_created": False, "message": "Moisture predicted above target for next 24 hours"}
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    farm_id = Column(Integer, ForeignKey("farms.id"))
+    crop = Column(String)
+    area = Column(Float)
+    soil_type = Column(String)
+    planting_date = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
+    farm = relationship("Farm", back_populates="fields")
+    devices = relationship("Device", back_populates="field")
 
-# === 4. CSV EXPORT ===
+class Device(Base):
+    __tablename__ = "devices"
 
-def forecast_to_csv(device_id: int, hours_ahead: int = 24, db: Session = None) -> StreamingResponse:
-    """
-    Export forecast as CSV.
-    """
-    # Use Prophet (or any) for forecast
-    result = forecast_moisture_prophet(device_id, days_ahead=hours_ahead//24 + 1, db=db)
-    if "error" in result:
-        return StreamingResponse(
-            io.StringIO("error,message\n" + result["error"]),
-            media_type="text/csv"
-        )
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String, unique=True, index=True, nullable=False)
+    field_id = Column(Integer, ForeignKey("fields.id"))
+    firmware_version = Column(String)
+    is_active = Column(Boolean, default=True)
+    last_seen = Column(DateTime(timezone=True))
+    registered_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    field = relationship("Field", back_populates="devices")
+    measurements = relationship("Measurement", back_populates="device")
+    commands = relationship("Command", back_populates="device")
+    irrigation_events = relationship("IrrigationEvent", back_populates="device")
+    alerts = relationship("Alert", back_populates="device")
+    sensors = relationship("Sensor", back_populates="device")
+
+class Sensor(Base):
+    __tablename__ = "sensors"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    sensor_type = Column(String)
+    calibration_id = Column(Integer, ForeignKey("calibrations.id"))
+
+    device = relationship("Device", back_populates="sensors")
+
+class Measurement(Base):
+    __tablename__ = "measurements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    temperature = Column(Float)
+    humidity = Column(Float)
+    soil_moisture = Column(Integer)
+    target_moisture = Column(Integer)
+    rain_detected = Column(Boolean, default=False)
+    motion_detected = Column(Boolean, default=False)
+    pump_active = Column(Boolean, default=False)
+    manual_override = Column(Boolean, default=False)
+    sequence = Column(Integer)
+    soil_raw = Column(Integer)
+    rain_raw = Column(Integer)
+
+    device = relationship("Device", back_populates="measurements")
+
+class IrrigationEvent(Base):
+    __tablename__ = "irrigation_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    start_time = Column(DateTime(timezone=True))
+    end_time = Column(DateTime(timezone=True))
+    duration_seconds = Column(Integer)
+    mode = Column(String)
+    trigger = Column(String)
+    soil_before = Column(Integer)
+    soil_after = Column(Integer)
+    rain_before = Column(Boolean)
+    fault_state = Column(String)
+
+    device = relationship("Device", back_populates="irrigation_events")
+
+class Command(Base):
+    __tablename__ = "commands"
+
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    requested_by = Column(String)
+    command = Column(String, nullable=False)
+    payload = Column(JSON)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    executed = Column(Boolean, default=False)
+    executed_at = Column(DateTime(timezone=True))
+
+    device = relationship("Device", back_populates="commands")
+
+class Alert(Base):
+    __tablename__ = "alerts"
     
-    forecast_list = result["forecast"]
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(["timestamp", "predicted_moisture", "lower_bound", "upper_bound"])
-    for entry in forecast_list:
-        writer.writerow([
-            entry["timestamp"],
-            entry["predicted_moisture"],
-            entry["lower_bound"],
-            entry["upper_bound"]
-        ])
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    severity = Column(String)
+    message = Column(String)
+    forecast_data = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    device = relationship("Device", back_populates="alerts")
+
+class BlockchainRecord(Base):
+    __tablename__ = "blockchain_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    dataset_id = Column(String, index=True)
+    device_id = Column(String)
+    field_id = Column(Integer)
+    data_hash = Column(String)
+    stellar_transaction = Column(String)
+    soroban_contract = Column(String)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    verified = Column(Boolean, default=False)
+
+class Calibration(Base):
+    __tablename__ = "calibrations"
     
-    output.seek(0)
-    return StreamingResponse(
-        output,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=forecast_device_{device_id}.csv"}
-    )
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(Integer, ForeignKey("devices.id"))
+    sensor_type = Column(String)
+    calibration_version = Column(String)
+    dry_reference = Column(Integer)
+    wet_reference = Column(Integer)
+    parameters = Column(JSON)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class SoilSample(Base):
+    __tablename__ = "soil_samples"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    field_id = Column(Integer, ForeignKey("fields.id"))
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    latitude = Column(Float)
+    longitude = Column(Float)
+    depth_cm = Column(Float)
+    ph = Column(Float)
+    nitrogen = Column(Float)
+    phosphorus = Column(Float)
+    potassium = Column(Float)
+    organic_matter = Column(Float)
+    source = Column(String)
+    operator_id = Column(Integer)

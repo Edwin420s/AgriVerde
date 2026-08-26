@@ -39,6 +39,7 @@ void updateSensors() {
     isMotionDetected = digitalRead(PIR_SENSOR_PIN) == HIGH;
     isTouchDetected = digitalRead(TOUCH_SENSOR_PIN) == HIGH;
     
-    // Rain threshold pushed up to 3500 to ensure it doesn't trigger when dry
-    isRaining = (rainSensorValue > 3500);
+    // Rain sensor outputs high (~4095) when dry, and drops when wet.
+    // Threshold set to < 1700 as requested.
+    isRaining = (rainSensorValue < 1700);
 }
