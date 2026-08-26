@@ -139,3 +139,85 @@ class BlockchainRecordResponse(BaseModel):
     soroban_contract: str
     timestamp: datetime
     verified: bool
+
+    # Farm
+class FarmBase(BaseModel):
+    name: str
+    location: Optional[str] = None
+
+class FarmCreate(FarmBase):
+    pass
+
+class FarmUpdate(FarmBase):
+    pass
+
+class FarmResponse(FarmBase):
+    id: int
+    owner_id: int
+    created_at: datetime
+
+# Field
+class FieldBase(BaseModel):
+    name: str
+    farm_id: int
+    crop: Optional[str] = None
+    area: Optional[float] = None
+    soil_type: Optional[str] = None
+    planting_date: Optional[datetime] = None
+
+class FieldCreate(FieldBase):
+    pass
+
+class FieldUpdate(FieldBase):
+    pass
+
+class FieldResponse(FieldBase):
+    id: int
+    created_at: datetime
+
+# Sensor
+class SensorBase(BaseModel):
+    device_id: int
+    sensor_type: str  # soil, temperature, humidity, rain, pir
+    calibration_id: Optional[int] = None
+
+class SensorCreate(SensorBase):
+    pass
+
+class SensorUpdate(SensorBase):
+    pass
+
+class SensorResponse(SensorBase):
+    id: int
+
+# Command
+class CommandBase(BaseModel):
+    device_id: int
+    command: str
+    payload: Optional[dict] = None
+
+class CommandCreate(CommandBase):
+    pass
+
+class CommandResponse(CommandBase):
+    id: int
+    requested_by: str
+    timestamp: datetime
+    executed: bool
+    executed_at: Optional[datetime]
+
+# Calibration
+class CalibrationBase(BaseModel):
+    device_id: int
+    sensor_type: str
+    calibration_version: str
+    dry_reference: int
+    wet_reference: int
+    parameters: Optional[dict] = None
+
+class CalibrationCreate(CalibrationBase):
+    pass
+
+class CalibrationResponse(CalibrationBase):
+    id: int
+    created_at: datetimes

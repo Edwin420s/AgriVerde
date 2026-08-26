@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     STELLAR_SECRET_KEY: str
     STELLAR_PUBLIC_KEY: str
     SOROBAN_CONTRACT_ID: str
+    STELLAR_HORIZON_URL: str = "https://horizon-testnet.stellar.org"
+    STELLAN_RPC_URL: str = "https://soroban-testnet.stellar.org"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"
