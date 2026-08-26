@@ -11,6 +11,22 @@ from app.workers.command_worker import execute_command
 
 router = APIRouter()
 
+@router.post("/commands/{command_id}/ack")
+def acknowledge_command(
+    command_id: int,
+    ack: CommandAckSchema,  # { status: str, received_at: datetime? }
+    db: Session = Depends(get_db)
+):
+    cmd = db.query(Command).filter(Command.id == command_id).first()
+    if not cmd:
+        raise HTTPException(404, "Command not found")
+    cmd.status = ack.status
+    if ack.status == "received":
+        cmd.received_at = datetime.utcnow()
+    elif ack.status == "executed":
+        cmd.executed_at = datetime.utcnow()
+    db.commit()
+    return {"status": "acknowledged"}
 @router.post("/commands", response_model=CommandResponse, status_code=status.HTTP_201_CREATED)
 def create_command(
     cmd: CommandCreate,
