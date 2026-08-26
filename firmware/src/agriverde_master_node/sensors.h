@@ -11,5 +11,6 @@ extern int rainSensorValue;
 extern int potentiometerValue;
 extern bool isMotionDetected;
 extern bool isTouchDetected;
+extern bool isRaining;
 
 #endif

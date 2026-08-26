@@ -10,6 +10,7 @@ int rainSensorValue = 0;
 int potentiometerValue = 0;
 bool isMotionDetected = false;
 bool isTouchDetected = false;
+bool isRaining = false;
 
 DHT dht(DHT_PIN, DHT_TYPE);
 
@@ -27,4 +28,7 @@ void updateSensors() {
     potentiometerValue = analogRead(POTENTIOMETER_PIN);
     isMotionDetected = digitalRead(PIR_SENSOR_PIN) == HIGH;
     isTouchDetected = digitalRead(TOUCH_SENSOR_PIN) == HIGH;
+    
+    // Fast detection: if it drops slightly below 4095 (dry), it's raining!
+    isRaining = (rainSensorValue < 3500);
 }
