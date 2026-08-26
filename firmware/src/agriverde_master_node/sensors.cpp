@@ -20,15 +20,25 @@ void setupSensors() {
     pinMode(PIR_SENSOR_PIN, INPUT);
 }
 
+static unsigned long lastDhtReadTime = 0;
+
 void updateSensors() {
-    currentTemperature = dht.readTemperature();
-    currentHumidity = dht.readHumidity();
+    // DHT11 sensors require at least 2 seconds between reads. 
+    // Reading them too fast blocks the CPU and causes major lag!
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastDhtReadTime >= 2000 || lastDhtReadTime == 0) {
+        lastDhtReadTime = currentMillis;
+        currentTemperature = dht.readTemperature();
+        currentHumidity = dht.readHumidity();
+    }
+
+    // These sensors can be read at lightning speed every loop
     soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);
     rainSensorValue = analogRead(RAIN_SENSOR_PIN);
     potentiometerValue = analogRead(POTENTIOMETER_PIN);
     isMotionDetected = digitalRead(PIR_SENSOR_PIN) == HIGH;
     isTouchDetected = digitalRead(TOUCH_SENSOR_PIN) == HIGH;
     
-    // Fast detection: if it drops below 3000 it is raining
-    isRaining = (rainSensorValue < 3000);
+    // Rain threshold pushed up to 3500 to ensure it doesn't trigger when dry
+    isRaining = (rainSensorValue > 3500);
 }
