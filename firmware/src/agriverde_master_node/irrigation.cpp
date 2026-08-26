@@ -12,6 +12,12 @@ void updateIrrigation() {
     // The potentiometer sets the threshold for when the soil is considered "DRY"
     int dynamicThreshold = potentiometerValue; 
 
+    // Safety: Do not run the pump if it is currently raining!
+    if (isRaining) {
+        digitalWrite(RELAY_PUMP_PIN, RELAY_OFF);
+        return;
+    }
+
     // Simple logic for pump based on soil moisture
     if (soilMoistureValue > dynamicThreshold) {
         digitalWrite(RELAY_PUMP_PIN, RELAY_ON); // Turn on

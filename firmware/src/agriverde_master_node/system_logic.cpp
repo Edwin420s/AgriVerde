@@ -41,19 +41,20 @@ void updateSystemLogic() {
         isAlarm = true;
     }
 
-    // 3. Rain Sensor -> Blue LED (Temporarily disabled for testing Pump LED)
-    // if (rainSensorValue < 3000) {
-    //     digitalWrite(LED_BLUE_PIN, HIGH);
-    // }
+    // 3 & 4. Rain & Pump Status
+    bool pumpRunning = (digitalRead(RELAY_PUMP_PIN) == RELAY_ON);
 
-    // 4. Pump Status -> Blue LED
-    if (digitalRead(RELAY_PUMP_PIN) == RELAY_ON) {
+    if (isRaining) {
+        // If it is rain both the pump [LED] and green to be on
         digitalWrite(LED_BLUE_PIN, HIGH);
-    }
-
-    // 5. Normal Operation -> Green LED
-    // If no alarm, show green.
-    if (!isAlarm) {
-        digitalWrite(LED_GREEN_PIN, HIGH);
+        if (!isAlarm) digitalWrite(LED_GREEN_PIN, HIGH);
+    } else if (pumpRunning) {
+        // If it is the pump only one led on (Blue)
+        digitalWrite(LED_BLUE_PIN, HIGH);
+        digitalWrite(LED_GREEN_PIN, LOW);
+    } else {
+        // Normal operation
+        digitalWrite(LED_BLUE_PIN, LOW);
+        if (!isAlarm) digitalWrite(LED_GREEN_PIN, HIGH);
     }
 }

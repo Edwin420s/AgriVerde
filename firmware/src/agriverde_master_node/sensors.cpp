@@ -29,6 +29,6 @@ void updateSensors() {
     isMotionDetected = digitalRead(PIR_SENSOR_PIN) == HIGH;
     isTouchDetected = digitalRead(TOUCH_SENSOR_PIN) == HIGH;
     
-    // Fast detection: if it drops slightly below 4095 (dry), it's raining!
-    isRaining = (rainSensorValue < 3500);
+    // Fast detection: if it drops below 3000 it is raining
+    isRaining = (rainSensorValue < 3000);
 }
