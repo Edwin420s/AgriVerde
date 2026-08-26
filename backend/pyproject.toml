@@ -1,0 +1,23 @@
+[project]
+name = "agriverde-backend"
+version = "1.0.0"
+description = "AgriVerde Backend API"
+authors = [{name = "Your Name"}]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlalchemy",
+    "psycopg2-binary",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "python-multipart",
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "alembic",
+    "httpx",
+    "pyserial",
+    "celery",
+    "redis",
+    "stellar-sdk"
+]
