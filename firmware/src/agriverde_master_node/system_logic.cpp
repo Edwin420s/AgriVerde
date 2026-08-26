@@ -11,7 +11,7 @@ void setupSystemLogic() {
     pinMode(LED_RED_PIN, OUTPUT);
     
     // Turn all off initially
-    digitalWrite(BUZZER_PIN, LOW);
+    noTone(BUZZER_PIN);
     digitalWrite(LED_GREEN_PIN, LOW);
     digitalWrite(LED_BLUE_PIN, LOW);
     digitalWrite(LED_RED_PIN, LOW);
@@ -22,14 +22,14 @@ void updateSystemLogic() {
     digitalWrite(LED_GREEN_PIN, LOW);
     digitalWrite(LED_BLUE_PIN, LOW);
     digitalWrite(LED_RED_PIN, LOW);
-    digitalWrite(BUZZER_PIN, LOW);
+    noTone(BUZZER_PIN);
 
     bool isAlarm = false;
 
     // 1. Motion Detection -> Red LED + Buzzer
     if (isMotionDetected) {
         digitalWrite(LED_RED_PIN, HIGH);
-        digitalWrite(BUZZER_PIN, HIGH); // Sound alarm
+        tone(BUZZER_PIN, 2000); // Sound alarm at 2000Hz
         isAlarm = true;
     }
 
@@ -37,7 +37,7 @@ void updateSystemLogic() {
     if (isTouchDetected) {
         // We'll also sound a quick beep and light Red for touch
         digitalWrite(LED_RED_PIN, HIGH);
-        digitalWrite(BUZZER_PIN, HIGH);
+        tone(BUZZER_PIN, 3000); // Sound alarm at 3000Hz
         isAlarm = true;
     }
 
