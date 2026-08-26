@@ -36,7 +36,7 @@
 // Calibration (tune these)
 #define SOIL_DRY 4095
 #define SOIL_WET 1500
-#define RAIN_THRESHOLD 3000
+#define RAIN_THRESHOLD 1700
 #define TEMP_ALARM_THRESHOLD 30.0
 #define MAX_PUMP_RUNTIME_MS 60000  // 60 seconds safety
 
