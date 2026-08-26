@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <DHT.h>
 #include "sensors.h"
 #include "config.h"
 
@@ -10,12 +11,17 @@ int potentiometerValue = 0;
 bool isMotionDetected = false;
 bool isTouchDetected = false;
 
+DHT dht(DHT_PIN, DHT_TYPE);
+
 void setupSensors() {
+    dht.begin();
     pinMode(TOUCH_SENSOR_PIN, INPUT);
     pinMode(PIR_SENSOR_PIN, INPUT);
 }
 
 void updateSensors() {
+    currentTemperature = dht.readTemperature();
+    currentHumidity = dht.readHumidity();
     soilMoistureValue = analogRead(SOIL_MOISTURE_PIN);
     rainSensorValue = analogRead(RAIN_SENSOR_PIN);
     potentiometerValue = analogRead(POTENTIOMETER_PIN);

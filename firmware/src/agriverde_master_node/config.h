@@ -4,10 +4,13 @@
 // OLED I2C
 #define OLED_SDA 21
 #define OLED_SCL 22
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET -1
 
 // Sensors
 #define DHT_PIN 4
-#define DHT_TYPE 11 // Assuming DHT11 based on previous interactions
+#define DHT_TYPE DHT11
 #define SOIL_MOISTURE_PIN 34
 #define RAIN_SENSOR_PIN 35
 #define POTENTIOMETER_PIN 32
@@ -16,6 +19,8 @@
 
 // Outputs
 #define RELAY_PUMP_PIN 19
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
 #define BUZZER_PIN 13
 #define LED_GREEN_PIN 25
 #define LED_BLUE_PIN 26

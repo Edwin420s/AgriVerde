@@ -5,14 +5,17 @@
 
 void setupIrrigation() {
     pinMode(RELAY_PUMP_PIN, OUTPUT);
-    digitalWrite(RELAY_PUMP_PIN, LOW); // Off by default
+    digitalWrite(RELAY_PUMP_PIN, RELAY_OFF); // Off by default
 }
 
 void updateIrrigation() {
+    // The potentiometer sets the threshold for when the soil is considered "DRY"
+    int dynamicThreshold = potentiometerValue; 
+
     // Simple logic for pump based on soil moisture
-    if (soilMoistureValue > MOISTURE_THRESHOLD_DRY) {
-        digitalWrite(RELAY_PUMP_PIN, HIGH); // Turn on
-    } else if (soilMoistureValue < MOISTURE_THRESHOLD_WET) {
-        digitalWrite(RELAY_PUMP_PIN, LOW); // Turn off
+    if (soilMoistureValue > dynamicThreshold) {
+        digitalWrite(RELAY_PUMP_PIN, RELAY_ON); // Turn on
+    } else if (soilMoistureValue < dynamicThreshold - 300) { // 300 is hysteresis
+        digitalWrite(RELAY_PUMP_PIN, RELAY_OFF); // Turn off
     }
 }
