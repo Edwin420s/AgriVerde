@@ -1,0 +1,228 @@
+# ============================
+# Python (Backend)
+# ============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+pyrightconfig.json
+.env
+.venv
+*.pid
+*.db
+*.sqlite3
+alembic/versions/*.pyc
+alembic/versions/__pycache__/
+
+# ============================
+# Firmware (ESP32)
+# ============================
+firmware/.pio/
+firmware/.vscode/
+firmware/.idea/
+firmware/build/
+firmware/dist/
+firmware/*.bin
+firmware/*.elf
+firmware/*.map
+firmware/platformio.ini.bak
+firmware/lib_deps/
+firmware/src/.*.swp
+firmware/src/.*.swo
+firmware/.clang-format
+firmware/.clang-tidy
+firmware/.gitignore.local
+firmware/secrets.h
+firmware/config.local.h
+
+# ============================
+# Frontend (React/TypeScript)
+# ============================
+frontend/node_modules/
+frontend/.pnp/
+frontend/.pnp.js
+frontend/coverage/
+frontend/build/
+frontend/dist/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+frontend/.cache/
+frontend/.parcel-cache/
+frontend/.vscode/
+frontend/.idea/
+frontend/*.log
+frontend/*.tsbuildinfo
+frontend/package-lock.json
+frontend/yarn.lock
+frontend/.eslintcache
+frontend/.prettierignore
+frontend/.stylelintcache
+
+# ============================
+# Blockchain (Rust/Soroban)
+# ============================
+blockchain/target/
+blockchain/Cargo.lock
+blockchain/.cargo/
+blockchain/.rustc_info.json
+blockchain/*.profdata
+blockchain/contracts/*/target/
+blockchain/contracts/*/Cargo.lock
+blockchain/contracts/*/.cargo/
+blockchain/deployments/*.json
+blockchain/.env
+
+# ============================
+# General / Editor / OS
+# ============================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*.rej
+*~
+.nfs*
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
+*.sublime-project
+*.sublime-workspace
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+.remote-sync.json
+.ftpconfig
+.sftpconfig
+.htaccess
+.htpasswd
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.env
+*.env.local
+*.env.*.local
+*.cache
+*.tmp
+*.temp
+
+# ============================
+# Data directories (optional)
+# ============================
+data/raw/
+data/processed/
+data/validated/
+data/exports/
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/validated/.gitkeep
+!data/exports/.gitkeep
+
+# ============================
+# Monitoring (Grafana/Prometheus data)
+# ============================
+monitoring/grafana/data/
+monitoring/prometheus/data/
+monitoring/grafana/.env
+monitoring/prometheus/.env
+
+# ============================
+# Deployment (secrets)
+# ============================
+deployment/production/*.env
+deployment/production/*.secrets
+deployment/docker/*.env
+deployment/nginx/ssl/
+*.pem
+*.key
+*.crt
+*.csr
+
+# ============================
+# Documentation build
+# ============================
+docs/_build/
+docs/api/
+docs/html/
+docs/latex/
+docs/man/
+docs/texinfo/
+docs/doctrees/
+docs/__pycache__/
+
+# ============================
+# Simulation (Wokwi local files)
+# ============================
+simulation/wokwi/*.local
+simulation/wokwi/.wokwi
+simulation/wokwi/*.log
+
+# ============================
+# Tests & coverage
+# ============================
+*.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+test-reports/
+jest-coverage/
+cypress/videos/
+cypress/screenshots/
+.nyc_output/
+
+# ============================
+# Scripts generated files
+# ============================
+scripts/database/*.dump
+scripts/database/*.sql.gz
+*.backup
+*.sql.bak
