@@ -34,6 +34,8 @@ void updateDisplay() {
     display.print("Soil: "); display.print(soilMoistureValue);
     display.print(" Thr: "); display.println(potentiometerValue);
     
+    display.print("Rain: "); display.println(rainSensorValue);
+    
     display.print("Pump: ");
     display.print(digitalRead(RELAY_PUMP_PIN) == RELAY_ON ? "ON " : "OFF ");
     display.print("Touch: ");

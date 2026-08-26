@@ -41,12 +41,10 @@ void updateSystemLogic() {
         isAlarm = true;
     }
 
-    // 3. Rain Sensor -> Blue LED (Assuming lower analog value = more rain, depending on module)
-    // Most analog rain sensors output ~4095 when dry, and go down when wet.
-    // Let's assume < 3000 means it's raining.
-    if (rainSensorValue < 3000) {
-        digitalWrite(LED_BLUE_PIN, HIGH);
-    }
+    // 3. Rain Sensor -> Blue LED (Temporarily disabled for testing Pump LED)
+    // if (rainSensorValue < 3000) {
+    //     digitalWrite(LED_BLUE_PIN, HIGH);
+    // }
 
     // 4. Pump Status -> Blue LED
     if (digitalRead(RELAY_PUMP_PIN) == RELAY_ON) {
