@@ -3,11 +3,11 @@ from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime
 from app.database.session import get_db
-from app.models.models import Command, Device
-from app.schemas.schemas import CommandCreate, CommandResponse
+from app.models.models import Command, Device, Field, Farm, User
+from app.schemas.schemas import CommandCreate, CommandResponse, CommandAckSchema
 from app.api.v1.auth import get_current_user
-from app.models.models import User
 from app.workers.command_worker import execute_command
+from app.core.logging import logger
 
 router = APIRouter()
 
@@ -20,11 +20,9 @@ def acknowledge_command(
     cmd = db.query(Command).filter(Command.id == command_id).first()
     if not cmd:
         raise HTTPException(404, "Command not found")
-    cmd.status = ack.status
-    if ack.status == "received":
-        cmd.received_at = datetime.utcnow()
-    elif ack.status == "executed":
-        cmd.executed_at = datetime.utcnow()
+    if ack.status == "executed":
+        cmd.executed = True
+        cmd.executed_at = ack.received_at or datetime.utcnow()
     db.commit()
     return {"status": "acknowledged"}
 @router.post("/commands", response_model=CommandResponse, status_code=status.HTTP_201_CREATED)
@@ -49,8 +47,11 @@ def create_command(
     db.add(new_cmd)
     db.commit()
     db.refresh(new_cmd)
-    # Trigger async execution (via Celery)
-    execute_command.delay(new_cmd.id)
+    # Trigger async execution (via Celery) if available
+    try:
+        execute_command.delay(new_cmd.id)
+    except Exception as e:
+        logger.warning(f"Could not dispatch command {new_cmd.id} via Celery broker: {e}")
     return new_cmd
 
 @router.get("/commands", response_model=List[CommandResponse])

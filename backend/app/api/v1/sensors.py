@@ -2,10 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.session import get_db
-from app.models.models import Sensor, Device
+from app.models.models import Sensor, Device, Field, Farm, User
 from app.schemas.schemas import SensorCreate, SensorResponse, SensorUpdate
 from app.api.v1.auth import get_current_user
-from app.models.models import User
 
 router = APIRouter()
 
