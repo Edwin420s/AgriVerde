@@ -4,8 +4,9 @@ from app.database.session import get_db
 from app.models.models import BlockchainRecord, Device, Field
 from app.schemas.schemas import DatasetCommit, BlockchainRecordResponse
 from app.blockchain.hashing import generate_hash
-from app.blockchain.soroban_client import submit_commitment
+from app.blockchain.soroban_client import submit_commitment, verify_commitment
 from app.core.logging import logger
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -34,7 +35,7 @@ def commit_dataset(commit: DatasetCommit, db: Session = Depends(get_db)):
         field_id=commit.field_id,
         data_hash=commit.data_hash,
         stellar_transaction=tx_hash,
-        soroban_contract="TODO"  # retrieve from settings
+        soroban_contract=settings.SOROBAN_CONTRACT_ID
     )
     db.add(record)
     db.commit()
@@ -46,5 +47,12 @@ def verify_dataset(dataset_id: str, db: Session = Depends(get_db)):
     record = db.query(BlockchainRecord).filter(BlockchainRecord.dataset_id == dataset_id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Record not found")
-    # Here we would call Stellar to verify the hash, but stub for now
+        
+    # Call Stellar to verify the hash
+    is_verified = verify_commitment(dataset_id)
+    
+    if is_verified and not record.verified:
+        record.verified = True
+        db.commit()
+        
     return {"verified": record.verified, "record": record}
