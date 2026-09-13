@@ -8,8 +8,8 @@ from app.api.v1 import (
 from app.core.config import settings
 from app.database.database import engine, Base
 
-# Create tables (in production, use Alembic migrations)
-Base.metadata.create_all(bind=engine)
+# In production, use Alembic migrations instead of create_all
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
