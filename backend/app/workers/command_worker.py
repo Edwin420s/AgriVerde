@@ -2,7 +2,15 @@ from app.workers.celery_app import celery_app
 from app.database.database import SessionLocal
 from app.models.models import Command, Device
 from app.core.logging import logger
-import requests
+from datetime import datetime
+try:
+    import httpx
+    RequestException = (httpx.HTTPError, Exception)
+    http_client = httpx
+except ImportError:
+    import requests
+    RequestException = (requests.exceptions.RequestException, Exception)
+    http_client = requests
 import json
 
 @celery_app.task
@@ -18,11 +26,24 @@ def execute_command(command_id: int):
             logger.error(f"Device {cmd.device_id} not found for command {command_id}")
             return
         
-        # Here we would send the command to the device via MQTT or HTTP.
-        # For demonstration, we simulate sending to an HTTP endpoint.
-        # The device would have a local HTTP server or WebSocket.
-        # We use the device's registered IP/URL if stored.
-        # For simplicity, we just mark as executed.
+        # Retrieve device IP (we'll use a mocked local IP or fallback for demonstration)
+        # In a real system, the device's current IP might be stored in Redis or DB.
+        device_ip = "192.168.1.100" 
+        
+        # Dispatch command to the edge node
+        try:
+            response = http_client.post(
+                f"http://{device_ip}/command",
+                json={"command": cmd.command, "payload": cmd.payload},
+                timeout=5
+            )
+            response.raise_for_status()
+        except RequestException as req_err:
+            logger.warning(f"Failed to reach device {device.device_id} at {device_ip}: {req_err}")
+            # Instead of failing, we can queue it for next check-in or mark as pending.
+            # We'll let it stay un-executed so it retries or gets picked up.
+            return
+            
         cmd.executed = True
         cmd.executed_at = datetime.utcnow()
         db.commit()
