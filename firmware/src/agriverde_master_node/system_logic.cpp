@@ -6,55 +6,57 @@
 
 void setupSystemLogic() {
     pinMode(BUZZER_PIN, OUTPUT);
-    pinMode(LED_GREEN_PIN, OUTPUT);
+    pinMode(LED_YELLOW_PIN, OUTPUT);
     pinMode(LED_BLUE_PIN, OUTPUT);
     pinMode(LED_RED_PIN, OUTPUT);
     
     // Turn all off initially
     noTone(BUZZER_PIN);
-    digitalWrite(LED_GREEN_PIN, LOW);
+    digitalWrite(LED_YELLOW_PIN, LOW);
     digitalWrite(LED_BLUE_PIN, LOW);
     digitalWrite(LED_RED_PIN, LOW);
 }
 
 void updateSystemLogic() {
-    // Reset all LEDs first
-    digitalWrite(LED_GREEN_PIN, LOW);
-    digitalWrite(LED_BLUE_PIN, LOW);
-    digitalWrite(LED_RED_PIN, LOW);
-    noTone(BUZZER_PIN);
+    unsigned long now = millis();
+    static bool motionBeepDone = false;
+    static bool isBeeping = false;
+    static unsigned long beepStartTime = 0;
 
-    bool isAlarm = false;
-
-    // 1. Motion Detection -> Red LED + Buzzer
-    if (isMotionDetected) {
+    // 1. Motion & Touch Alarm Handling (Single crisp beep on first detection, does NOT repeat)
+    if (isMotionAlarmActive || isTouchDetected) {
         digitalWrite(LED_RED_PIN, HIGH);
-        tone(BUZZER_PIN, 2000); // Sound alarm at 2000Hz
-        isAlarm = true;
-    }
 
-    // 2. Touch Detection -> Can act as a manual override or another alarm
-    if (isTouchDetected) {
-        // We'll also sound a quick beep and light Red for touch
-        digitalWrite(LED_RED_PIN, HIGH);
-        tone(BUZZER_PIN, 3000); // Sound alarm at 3000Hz
-        isAlarm = true;
-    }
-
-    // 3 & 4. Rain & Pump Status
-    bool pumpRunning = (digitalRead(RELAY_PUMP_PIN) == RELAY_ON);
-
-    if (isRaining) {
-        // If it is rain both the pump [LED] and green to be on
-        digitalWrite(LED_BLUE_PIN, HIGH);
-        if (!isAlarm) digitalWrite(LED_GREEN_PIN, HIGH);
-    } else if (pumpRunning) {
-        // If it is the pump only one led on (Blue)
-        digitalWrite(LED_BLUE_PIN, HIGH);
-        digitalWrite(LED_GREEN_PIN, LOW);
+        // Sound one single beep on first detection event - do NOT repeat while active
+        if (!motionBeepDone) {
+            tone(BUZZER_PIN, isTouchDetected ? 2800 : 1800);
+            beepStartTime = now;
+            isBeeping = true;
+            motionBeepDone = true; // Lock: do not repeat beep for this detection event
+        }
     } else {
-        // Normal operation
+        digitalWrite(LED_RED_PIN, LOW);
+        motionBeepDone = false; // Reset lock once sensor has completely cleared
+    }
+
+    // Automatically silence buzzer after short BEEP_DURATION_MS (150ms)
+    if (isBeeping && (now - beepStartTime >= BEEP_DURATION_MS)) {
+        noTone(BUZZER_PIN);
+        isBeeping = false;
+    }
+
+    // 2. Pump & Rain LED Status (Yellow = Standby/Normal, Blue = Pump Running)
+    if (isPumpRunning || digitalRead(RELAY_PUMP_PIN) == RELAY_ON) {
+        // Pump Active: Blue LED ON, Yellow LED OFF
+        digitalWrite(LED_BLUE_PIN, HIGH);
+        digitalWrite(LED_YELLOW_PIN, LOW);
+    } else if (isRaining) {
+        // Rain Detected: Pump is locked out, Blue LED is OFF, Yellow LED is ON
         digitalWrite(LED_BLUE_PIN, LOW);
-        if (!isAlarm) digitalWrite(LED_GREEN_PIN, HIGH);
+        digitalWrite(LED_YELLOW_PIN, HIGH);
+    } else {
+        // Normal Standby: Blue LED OFF, Yellow LED ON
+        digitalWrite(LED_BLUE_PIN, LOW);
+        digitalWrite(LED_YELLOW_PIN, HIGH);
     }
 }
