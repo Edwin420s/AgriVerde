@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.database.session import get_db
 from app.models.models import User
 from app.schemas.schemas import Token, LoginRequest, UserCreate, UserResponse
-from app.core.security import verify_password, get_password_hash, create_access_token
+from app.core.security import verify_password, get_password_hash, create_access_token, decode_access_token
 from app.core.logging import logger
 
 router = APIRouter()

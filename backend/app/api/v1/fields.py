@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.session import get_db
-from app.models.models import Field, Farm
+from app.models.models import Field, Farm, User
 from app.schemas.schemas import FieldCreate, FieldResponse, FieldUpdate
 from app.api.v1.auth import get_current_user
 
