@@ -40,29 +40,51 @@ class DeviceResponse(BaseModel):
 
 # Telemetry (ingestion)
 class TelemetryData(BaseModel):
+    model_config = {"extra": "allow"}
     device_id: str
+    hardware_id: Optional[str] = None
     timestamp: Optional[datetime] = None
-    temperature: float
-    humidity: float
-    soil_moisture: int
-    target_moisture: Optional[int] = None
-    rain_detected: bool
-    motion_detected: bool
-    pump_active: bool
-    manual_override: bool
+    temperature: Optional[float] = None
+    temperature_c: Optional[float] = None
+    humidity: Optional[float] = None
+    humidity_percent: Optional[float] = None
+    soil_moisture: Optional[float] = None
+    soil_moisture_percent: Optional[float] = None
+    target_moisture: Optional[float] = None
+    target_moisture_percent: Optional[float] = None
+    rain_detected: bool = False
+    motion_detected: bool = False
+    pump_active: bool = False
+    pump_state: Optional[bool] = None
+    relay_state: Optional[bool] = None
+    manual_override: bool = False
+    touch_override: Optional[bool] = None
     sequence: Optional[int] = None
+    seq: Optional[int] = None
     soil_raw: Optional[int] = None
+    soil_adc: Optional[int] = None
+    raw_soil_adc: Optional[int] = None
     rain_raw: Optional[int] = None
+    rain_adc: Optional[int] = None
+    raw_rain_adc: Optional[int] = None
+    rain_percentage: Optional[float] = None
+    pir_raw: Optional[int] = None
+    raw_touch_val: Optional[int] = None
+    rssi: Optional[int] = None
+    boot_count: Optional[int] = None
+    uptime_sec: Optional[int] = None
+    free_heap: Optional[int] = None
+    firmware_version: Optional[str] = None
 
 # Measurement (response)
 class MeasurementResponse(BaseModel):
     id: int
     device_id: int
     timestamp: datetime
-    temperature: float
-    humidity: float
-    soil_moisture: int
-    target_moisture: int
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+    soil_moisture: Optional[float] = None
+    target_moisture: Optional[float] = None
     rain_detected: bool
     motion_detected: bool
     pump_active: bool
@@ -206,6 +228,10 @@ class CommandResponse(CommandBase):
     executed: bool
     executed_at: Optional[datetime]
 
+class CommandAckSchema(BaseModel):
+    status: str
+    received_at: Optional[datetime] = None
+
 # Calibration
 class CalibrationBase(BaseModel):
     device_id: int
@@ -220,4 +246,4 @@ class CalibrationCreate(CalibrationBase):
 
 class CalibrationResponse(CalibrationBase):
     id: int
-    created_at: datetimes
+    created_at: datetime
