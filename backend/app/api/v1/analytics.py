@@ -90,3 +90,64 @@ def correlation(
         raise HTTPException(status_code=404, detail="Device not found")
     result = environmental_correlation(device_id, hours, db)
     return {"device_id": device_id, **result}
+
+# Add imports
+from app.analytics.forecast import (
+    auto_sarima_forecast,
+    lstm_forecast,
+    trigger_alert_on_forecast_drop,
+    forecast_to_csv
+)
+
+# New endpoints
+
+@router.get("/analytics/forecast/auto-sarima")
+def auto_sarima(
+    device_id: int,
+    hours_ahead: int = Query(24, ge=1, le=48),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    result = auto_sarima_forecast(device_id, hours_ahead, db)
+    return {"device_id": device_id, **result}
+
+@router.get("/analytics/forecast/lstm")
+def lstm(
+    device_id: int,
+    hours_ahead: int = Query(24, ge=1, le=48),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    result = lstm_forecast(device_id, hours_ahead, lookback=48, db=db)
+    return {"device_id": device_id, **result}
+
+@router.post("/analytics/alert/forecast-drop")
+def check_forecast_alert(
+    device_id: int,
+    target_moisture: int = Query(30, ge=10, le=80),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    result = trigger_alert_on_forecast_drop(device_id, target_moisture, db)
+    return {"device_id": device_id, **result}
+
+@router.get("/analytics/forecast/export-csv")
+def export_forecast_csv(
+    device_id: int,
+    hours_ahead: int = Query(24, ge=1, le=72),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    device = db.query(Device).filter(Device.id == device_id).first()
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return forecast_to_csv(device_id, hours_ahead, db)

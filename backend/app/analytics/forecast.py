@@ -1,13 +1,35 @@
-import pandas as pd
-import numpy as np
-from pmdarima import auto_arima
-from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
 import io
 import csv
+from typing import Dict, Any
+from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
+
+import pandas as pd
+import numpy as np
+try:
+    from pmdarima import auto_arima
+except ImportError:
+    auto_arima = None
+
+try:
+    from sklearn.preprocessing import MinMaxScaler
+except ImportError:
+    MinMaxScaler = None
+
+try:
+    from tensorflow.keras.models import Sequential
+    from tensorflow.keras.layers import LSTM, Dense, Dropout
+    from tensorflow.keras.callbacks import EarlyStopping
+except ImportError:
+    Sequential = None
+    LSTM = None
+    Dense = None
+    Dropout = None
+    EarlyStopping = None
+
+from app.models.models import Alert
+from app.core.logging import logger
+from app.analytics.analytics import get_full_measurements_df, forecast_moisture_prophet
 
 # === 1. AUTO-SARIMA FORECAST ===
 
@@ -19,6 +41,8 @@ def auto_sarima_forecast(
     """
     Auto-select SARIMA order using pmdarima and forecast.
     """
+    if auto_arima is None:
+        return {"error": "pmdarima is not installed on this server"}
     df = get_full_measurements_df(device_id, hours=72, db=db)  # use last 3 days
     if len(df) < 48:
         return {"error": "Insufficient data for auto-SARIMA (need >48 points)"}
@@ -76,6 +100,8 @@ def lstm_forecast(
     """
     LSTM forecast – only if we have at least 6 months of data (4320 hourly points).
     """
+    if Sequential is None or MinMaxScaler is None:
+        return {"error": "tensorflow and/or scikit-learn are not installed on this server"}
     df = get_full_measurements_df(device_id, hours=4320, db=db)  # 180 days
     if len(df) < 4320:
         return {"error": f"Insufficient data for LSTM. Need 4320 hourly points, got {len(df)}"}

@@ -9,15 +9,33 @@ from app.core.logging import logger
 import warnings
 warnings.filterwarnings('ignore')
 
-# --- New imports ---
-from prophet import Prophet
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from sklearn.ensemble import IsolationForest
-from sklearn.preprocessing import StandardScaler
-from scipy.stats import pearsonr
+# --- Optional ML / Statistical imports ---
+try:
+    from prophet import Prophet
+except ImportError:
+    Prophet = None
 
-# --- Existing functions (drying_rate, efficiency) remain here ---
-# I'll keep them in the same file for brevity, but they are assumed to exist.
+try:
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+except ImportError:
+    SARIMAX = None
+
+try:
+    from sklearn.ensemble import IsolationForest
+    from sklearn.preprocessing import StandardScaler
+except ImportError:
+    IsolationForest = None
+    StandardScaler = None
+
+try:
+    from scipy.stats import pearsonr
+except ImportError:
+    pearsonr = None
+
+# --- Existing functions (drying_rate, efficiency, anomalies, forecast) ---
+from app.analytics.moisture_analysis import calculate_drying_rate
+from app.analytics.irrigation_analysis import irrigation_efficiency
+
 
 def get_full_measurements_df(device_id: int, hours: int, db: Session) -> pd.DataFrame:
     """Fetch measurements with temperature and humidity for multivariate analysis."""
@@ -48,6 +66,8 @@ def forecast_moisture_prophet(
     """
     Forecast soil moisture using Facebook Prophet with weekly seasonality.
     """
+    if Prophet is None:
+        return {"error": "Prophet is not installed on this server"}
     df = get_full_measurements_df(device_id, hours=days_ahead*24, db=db)
     if len(df) < 48:  # need at least 2 days of data
         return {"error": "Insufficient data for Prophet (need >48 points)"}
@@ -87,6 +107,9 @@ def forecast_moisture_prophet(
         "model": "Prophet"
     }
 
+forecast_moisture = forecast_moisture_prophet
+
+
 
 def forecast_moisture_sarima(
     device_id: int, 
@@ -97,6 +120,8 @@ def forecast_moisture_sarima(
     Short-term forecast using SARIMA (Seasonal ARIMA).
     Faster than Prophet for small horizons.
     """
+    if SARIMAX is None:
+        return {"error": "statsmodels SARIMAX is not installed on this server"}
     df = get_full_measurements_df(device_id, hours=48, db=db)
     if len(df) < 30:
         return {"error": "Insufficient data for SARIMA"}
@@ -167,6 +192,9 @@ def detect_anomalies_iforest(
         })
     return result
 
+detect_anomalies = detect_anomalies_iforest
+
+
 
 # ============================================================
 # 3. IRRIGATION SCHEDULING SUGGESTION
@@ -232,9 +260,14 @@ def environmental_correlation(
     if len(clean_df) < 10:
         return {"error": "Not enough clean data points"}
     
-    corr_moist_temp, _ = pearsonr(clean_df['y'], clean_df['temperature'])
-    corr_moist_hum, _ = pearsonr(clean_df['y'], clean_df['humidity'])
-    corr_temp_hum, _ = pearsonr(clean_df['temperature'], clean_df['humidity'])
+    if pearsonr:
+        corr_moist_temp, _ = pearsonr(clean_df['y'], clean_df['temperature'])
+        corr_moist_hum, _ = pearsonr(clean_df['y'], clean_df['humidity'])
+        corr_temp_hum, _ = pearsonr(clean_df['temperature'], clean_df['humidity'])
+    else:
+        corr_moist_temp = float(clean_df['y'].corr(clean_df['temperature']))
+        corr_moist_hum = float(clean_df['y'].corr(clean_df['humidity']))
+        corr_temp_hum = float(clean_df['temperature'].corr(clean_df['humidity']))
     
     return {
         "moisture_temperature_correlation": round(corr_moist_temp, 3),
