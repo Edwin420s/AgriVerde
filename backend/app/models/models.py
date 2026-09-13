@@ -35,6 +35,9 @@ class Field(Base):
     name = Column(String, nullable=False)
     farm_id = Column(Integer, ForeignKey("farms.id"))
     crop = Column(String)
+    crop_type = Column(String, nullable=True)
+    variety = Column(String, nullable=True)
+    growth_stage = Column(String, nullable=True)
     area = Column(Float)
     soil_type = Column(String)
     planting_date = Column(DateTime(timezone=True))
@@ -48,6 +51,9 @@ class Device(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     device_id = Column(String, unique=True, index=True, nullable=False)
+    hardware_id = Column(String, nullable=True)
+    public_key = Column(String, nullable=True)
+    status = Column(String, default="online")
     field_id = Column(Integer, ForeignKey("fields.id"))
     firmware_version = Column(String)
     is_active = Column(Boolean, default=True)
@@ -88,6 +94,12 @@ class Measurement(Base):
     sequence = Column(Integer)
     soil_raw = Column(Integer)
     rain_raw = Column(Integer)
+    soil_adc = Column(Integer, nullable=True)
+    rain_adc = Column(Integer, nullable=True)
+    temperature_c = Column(Float, nullable=True)
+    humidity_percent = Column(Float, nullable=True)
+    soil_moisture_percent = Column(Integer, nullable=True)
+    target_moisture_percent = Column(Integer, nullable=True)
 
     device = relationship("Device", back_populates="measurements")
 
@@ -116,9 +128,13 @@ class Command(Base):
     requested_by = Column(String)
     command = Column(String, nullable=False)
     payload = Column(JSON)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    status = Column(String, default="pending")
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    received_at = Column(DateTime(timezone=True), nullable=True)
     executed = Column(Boolean, default=False)
-    executed_at = Column(DateTime(timezone=True))
+    executed_at = Column(DateTime(timezone=True), nullable=True)
+    result = Column(String, nullable=True)
+    timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     device = relationship("Device", back_populates="commands")
 
